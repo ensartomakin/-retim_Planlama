@@ -7,7 +7,7 @@ ana senaryoları uçtan uca test etmenizi sağlar.
 
 - Node.js **20.11+**
 - pnpm **9+** (`npm i -g pnpm@9`)
-- Docker Desktop (Postgres + Redis için)
+- PostgreSQL 16 (lokal servis **veya** Docker)
 
 ## 1. Ortamı hazırla
 
@@ -15,20 +15,29 @@ ana senaryoları uçtan uca test etmenizi sağlar.
 # 1) Depoyu aç
 cd -retim_Planlama
 
-# 2) .env dosyası
+# 2) .env dosyası — hem root'ta hem apps/web'de gerekli
 cp .env.example .env
-# .env içinde SUPER_ADMIN_EMAIL'i istediğin değere ayarla (örn. ensartomakin@demo.local)
-# DEV_MODE=true olduğundan emin ol
+ln -s ../../.env apps/web/.env    # Next.js kendi pkg'ını okur
+#   .env içinde SUPER_ADMIN_EMAIL'i istediğin değere ayarla
+#   DEV_MODE=true olduğundan emin ol (varsayılan)
 
-# 3) Postgres + Redis
+# 3) PostgreSQL'i başlat (iki seçenekten biri)
+
+## Seçenek A: Docker Desktop varsa
 pnpm docker:up
+
+## Seçenek B: Lokal kurulu Postgres ile
+sudo pg_ctlcluster 16 main start
+sudo -u postgres psql -c "CREATE USER tekstil WITH PASSWORD 'change_me_now' CREATEDB;"
+sudo -u postgres psql -c "CREATE DATABASE tekstil_mes OWNER tekstil;"
 
 # 4) Bağımlılıklar
 pnpm install
 
-# 5) Şemayı oluştur, migrate et
-pnpm db:generate
-pnpm db:migrate
+# 5) Migrasyonlar + Prisma Client (.env db paketi için de lazım)
+cp .env packages/db/.env
+pnpm db:migrate         # ilk kez: yeni migrasyon üretir
+# veya mevcut migrasyon varsa:  pnpm --filter @tekstil/db exec prisma migrate deploy
 
 # 6) Demo veri
 pnpm db:seed
@@ -38,6 +47,8 @@ pnpm dev
 ```
 
 → [http://localhost:3001](http://localhost:3001)
+
+Dashboard **200** ile açılmalı. Üstte **sarı DEV MODE şeridi** görünür.
 
 ## 2. DEV MODE nasıl çalışır?
 
@@ -128,8 +139,12 @@ pnpm db:seed    # demo veriyi yeniden yükler
 |---|---|
 | `relation does not exist` | `pnpm db:migrate` çalıştır |
 | Dashboard boş | `pnpm db:seed` çalıştır |
+| **Supabase error: URL and Key required** | `.env` `apps/web/` altında yok (symlink); `ln -s ../../.env apps/web/.env` |
+| `Environment variable not found: DATABASE_URL` | `cp .env packages/db/.env` |
 | "UNAUTHENTICATED" | `.env`'de `DEV_MODE=true` ve `SUPER_ADMIN_EMAIL` doğru mu? |
+| `Can't resolve '@/...'` | `apps/web/tsconfig.json`'da `"baseUrl": "."` olmalı + `rm -rf apps/web/.next` |
 | Docker port çakışması | `pnpm docker:down` → port 5432/6379 kullanıyor mu kontrol et |
+| `EADDRINUSE :::3001` | Eski dev server çalışıyor → `fuser -k 3001/tcp` |
 | Prisma client eski | `pnpm db:generate` |
 
 ## 7. Prod'a geçerken
