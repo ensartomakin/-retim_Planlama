@@ -1,0 +1,418 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Tekstil MES — Ortak Takip Ekranı</title>
+<style>
+  :root{
+    --bg:#f6f7fb;
+    --surface:#ffffff;
+    --ink:#1f2937;
+    --ink-2:#4b5563;
+    --ink-3:#9ca3af;
+    --line:#e5e7eb;
+    --brand:#7c3aed;         /* Odoo-mor */
+    --brand-2:#a78bfa;
+    --ok:#16a34a;
+    --warn:#f59e0b;
+    --bad:#ef4444;
+    --info:#0ea5e9;
+    --chip:#f3f4f6;
+    --shadow: 0 1px 2px rgba(16,24,40,.04), 0 1px 3px rgba(16,24,40,.06);
+    --shadow-lg: 0 10px 15px -3px rgba(16,24,40,.08), 0 4px 6px -4px rgba(16,24,40,.06);
+    --radius:14px;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);
+    font:14px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Inter,Ubuntu,"Helvetica Neue",Arial,sans-serif}
+  a{color:inherit;text-decoration:none}
+
+  /* LAYOUT */
+  .app{display:grid;grid-template-columns:240px 1fr;min-height:100vh}
+  .sidebar{background:#0f1115;color:#d1d5db;padding:18px 14px;position:sticky;top:0;height:100vh}
+  .brand{display:flex;align-items:center;gap:10px;font-weight:700;color:#fff;margin-bottom:22px}
+  .brand .logo{width:28px;height:28px;border-radius:8px;background:linear-gradient(135deg,var(--brand),var(--brand-2));display:grid;place-items:center;color:#fff;font-weight:800}
+  .nav{display:flex;flex-direction:column;gap:2px}
+  .nav a{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:8px;color:#cbd5e1;font-weight:500}
+  .nav a.active{background:#1f2937;color:#fff}
+  .nav a:hover{background:#111827;color:#fff}
+  .nav .dot{width:6px;height:6px;border-radius:50%;background:var(--brand-2)}
+  .nav .section{margin:14px 8px 6px;font-size:11px;letter-spacing:.08em;color:#6b7280;text-transform:uppercase}
+
+  .main{display:flex;flex-direction:column}
+  .topbar{position:sticky;top:0;z-index:5;background:var(--surface);border-bottom:1px solid var(--line);display:flex;align-items:center;gap:14px;padding:10px 22px}
+  .crumbs{color:var(--ink-3);font-size:13px}
+  .crumbs b{color:var(--ink)}
+  .search{flex:1;max-width:460px;position:relative}
+  .search input{width:100%;padding:9px 12px 9px 34px;border:1px solid var(--line);border-radius:10px;background:#fafafa;outline:none}
+  .search::before{content:"⌕";position:absolute;left:11px;top:7px;color:var(--ink-3);font-size:16px}
+  .topbar .spacer{flex:1}
+  .btn{display:inline-flex;align-items:center;gap:6px;padding:8px 12px;border-radius:10px;border:1px solid var(--line);background:#fff;cursor:pointer;font-weight:600}
+  .btn.primary{background:var(--brand);border-color:var(--brand);color:#fff}
+  .btn.ghost{background:transparent}
+  .avatar{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#c7d2fe,#fbcfe8);display:grid;place-items:center;font-weight:700;color:#111}
+  .role-chip{font-size:11px;padding:2px 8px;border-radius:999px;background:#ede9fe;color:#5b21b6;font-weight:700}
+
+  .content{padding:22px;display:grid;grid-template-columns:1fr;gap:18px}
+
+  /* KPI */
+  .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+  .kpi{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:14px 16px;box-shadow:var(--shadow);position:relative;overflow:hidden}
+  .kpi .label{color:var(--ink-2);font-size:12px;font-weight:600;letter-spacing:.02em}
+  .kpi .value{font-size:26px;font-weight:800;margin-top:6px}
+  .kpi .delta{margin-top:6px;font-size:12px;font-weight:700}
+  .kpi.ok .delta{color:var(--ok)}
+  .kpi.warn .delta{color:var(--warn)}
+  .kpi.bad .delta{color:var(--bad)}
+  .kpi .spark{position:absolute;right:10px;bottom:10px;opacity:.8}
+  .kpi .icon{position:absolute;top:12px;right:14px;width:34px;height:34px;border-radius:10px;display:grid;place-items:center;background:#f5f3ff;color:var(--brand);font-weight:800}
+
+  /* GRID ROW 2 */
+  .row{display:grid;grid-template-columns:2fr 1fr;gap:18px}
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow)}
+  .card > .hd{display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid var(--line)}
+  .card > .hd h3{margin:0;font-size:14px;font-weight:700}
+  .card > .hd .sub{color:var(--ink-3);font-size:12px}
+  .card > .hd .spacer{flex:1}
+  .tabs{display:flex;gap:6px}
+  .tab{padding:6px 10px;border-radius:8px;font-size:12px;font-weight:700;color:var(--ink-2);cursor:pointer}
+  .tab.on{background:#f5f3ff;color:var(--brand)}
+
+  /* PROCESS WHEELS */
+  .wheels{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;padding:16px}
+  .wheel{display:flex;flex-direction:column;align-items:center;gap:8px;padding:10px;border:1px dashed var(--line);border-radius:12px}
+  .donut{--p:72;--c:var(--brand); width:96px;height:96px;border-radius:50%;
+    background:conic-gradient(var(--c) calc(var(--p)*1%), #eef2ff 0);
+    display:grid;place-items:center;position:relative}
+  .donut::after{content:"";position:absolute;inset:10px;border-radius:50%;background:#fff}
+  .donut .p{position:relative;font-weight:800;font-size:18px}
+  .wheel .nm{font-weight:700}
+  .wheel .sm{color:var(--ink-3);font-size:12px}
+
+  /* TABLE */
+  table{width:100%;border-collapse:collapse}
+  th,td{padding:10px 12px;text-align:left;border-bottom:1px solid var(--line);font-size:13px}
+  th{color:var(--ink-2);font-weight:700;background:#fafafa;position:sticky;top:0}
+  tr:hover td{background:#fafafa}
+  .status{display:inline-flex;align-items:center;gap:6px;padding:3px 8px;border-radius:999px;font-size:11px;font-weight:800;border:1px solid transparent}
+  .s-taslak{background:#f3f4f6;color:#374151}
+  .s-bom{background:#e0f2fe;color:#075985}
+  .s-malz{background:#fef3c7;color:#92400e}
+  .s-hazir{background:#dcfce7;color:#166534}
+  .s-atolye{background:#ede9fe;color:#5b21b6}
+  .s-kapali{background:#e5e7eb;color:#1f2937}
+  .s-iptal{background:#fee2e2;color:#991b1b}
+  .bar{height:6px;border-radius:999px;background:#eef2ff;overflow:hidden;min-width:80px}
+  .bar > span{display:block;height:100%;background:linear-gradient(90deg,var(--brand),var(--brand-2))}
+
+  /* TIMELINE (Audit) */
+  .timeline{padding:8px 0}
+  .tl-item{display:grid;grid-template-columns:28px 1fr auto;gap:10px;padding:10px 16px;border-bottom:1px dashed var(--line)}
+  .tl-dot{width:10px;height:10px;border-radius:50%;background:var(--brand);margin-top:6px;box-shadow:0 0 0 4px #ede9fe}
+  .tl-title{font-weight:700}
+  .tl-sub{color:var(--ink-3);font-size:12px}
+  .tl-time{color:var(--ink-3);font-size:12px;white-space:nowrap}
+
+  /* CAPACITY */
+  .cap{display:grid;grid-template-columns:1fr 1fr;gap:14px;padding:16px}
+  .cap .item{border:1px solid var(--line);border-radius:12px;padding:12px}
+  .cap .top{display:flex;justify-content:space-between;font-weight:700}
+  .cap .big{font-size:20px;margin:4px 0 8px}
+
+  /* ALERTS */
+  .alerts{display:flex;flex-direction:column}
+  .alert{display:flex;gap:10px;padding:10px 16px;border-bottom:1px solid var(--line)}
+  .alert .ic{width:26px;height:26px;border-radius:8px;display:grid;place-items:center;font-weight:800;color:#fff}
+  .ic.bad{background:var(--bad)}
+  .ic.warn{background:var(--warn)}
+  .ic.info{background:var(--info)}
+
+  /* FOOTER ACTIONS */
+  .export{display:flex;gap:8px}
+
+  @media (max-width: 1100px){
+    .kpis{grid-template-columns:repeat(2,1fr)}
+    .wheels{grid-template-columns:repeat(2,1fr)}
+    .row{grid-template-columns:1fr}
+    .app{grid-template-columns:1fr}
+    .sidebar{display:none}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="brand"><div class="logo">T</div> Tekstil MES</div>
+    <div class="section">Ana</div>
+    <nav class="nav">
+      <a class="active" href="#"><span class="dot"></span> Dashboard</a>
+      <a href="#">● Modeller</a>
+      <a href="#">● Kalıplar</a>
+      <a href="#">● Siparişler</a>
+      <a href="#">● İş Emirleri</a>
+    </nav>
+    <div class="section">Tedarik</div>
+    <nav class="nav">
+      <a href="#">● Reçete (BOM)</a>
+      <a href="#">● Satın Alma</a>
+      <a href="#">● Stok</a>
+    </nav>
+    <div class="section">Sistem</div>
+    <nav class="nav">
+      <a href="#">● Raporlar</a>
+      <a href="#">● Audit Log</a>
+      <a href="#">● Kullanıcılar</a>
+    </nav>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main">
+    <div class="topbar">
+      <div class="crumbs">Ana &rsaquo; <b>Ortak Takip Ekranı</b></div>
+      <div class="search"><input placeholder="Model, sipariş no, barkod ara..." /></div>
+      <div class="spacer"></div>
+      <div class="export">
+        <button class="btn ghost">⤓ Excel</button>
+        <button class="btn ghost">⤓ PDF</button>
+      </div>
+      <button class="btn primary">+ Yeni Model</button>
+      <span class="role-chip">SUPER ADMIN</span>
+      <div class="avatar">EA</div>
+    </div>
+
+    <section class="content">
+      <!-- KPI CARDS -->
+      <div class="kpis">
+        <div class="kpi ok">
+          <div class="icon">M</div>
+          <div class="label">Aktif Model</div>
+          <div class="value">142</div>
+          <div class="delta">▲ 8 bu hafta</div>
+        </div>
+        <div class="kpi warn">
+          <div class="icon" style="background:#fffbeb;color:#b45309">S</div>
+          <div class="label">Açık Sipariş</div>
+          <div class="value">37</div>
+          <div class="delta">▲ 3 termin riski</div>
+        </div>
+        <div class="kpi bad">
+          <div class="icon" style="background:#fef2f2;color:#b91c1c">K</div>
+          <div class="label">Malzeme Bekleyen</div>
+          <div class="value">6</div>
+          <div class="delta">▲ 2 kritik</div>
+        </div>
+        <div class="kpi ok">
+          <div class="icon" style="background:#ecfdf5;color:#15803d">A</div>
+          <div class="label">Atölye Doluluğu</div>
+          <div class="value">78%</div>
+          <div class="delta">▼ sağlıklı bant</div>
+        </div>
+      </div>
+
+      <!-- PROCESS WHEELS + ALERTS -->
+      <div class="row">
+        <div class="card">
+          <div class="hd">
+            <h3>Süreç Çarkları</h3>
+            <span class="sub">· anlık durum</span>
+            <div class="spacer"></div>
+            <div class="tabs">
+              <div class="tab on">Bu Hafta</div>
+              <div class="tab">Bu Ay</div>
+              <div class="tab">Sezon</div>
+            </div>
+          </div>
+          <div class="wheels">
+            <div class="wheel">
+              <div class="donut" style="--p:42;--c:#7c3aed"><span class="p">42%</span></div>
+              <div class="nm">Tasarım</div><div class="sm">18 aktif / 7 onaylı</div>
+            </div>
+            <div class="wheel">
+              <div class="donut" style="--p:65;--c:#0ea5e9"><span class="p">65%</span></div>
+              <div class="nm">Kalıp</div><div class="sm">24 açık / revize 9</div>
+            </div>
+            <div class="wheel">
+              <div class="donut" style="--p:78;--c:#f59e0b"><span class="p">78%</span></div>
+              <div class="nm">Planlama</div><div class="sm">37 sipariş / 6 bekleyen</div>
+            </div>
+            <div class="wheel">
+              <div class="donut" style="--p:54;--c:#16a34a"><span class="p">54%</span></div>
+              <div class="nm">Atölye</div><div class="sm">21 iş emri / 12 aktif</div>
+            </div>
+          </div>
+          <div class="cap">
+            <div class="item">
+              <div class="top"><span>Atölye A — Dikim</span><span>82%</span></div>
+              <div class="big">1,230 / 1,500 adet</div>
+              <div class="bar"><span style="width:82%"></span></div>
+            </div>
+            <div class="item">
+              <div class="top"><span>Atölye B — Kesim</span><span>64%</span></div>
+              <div class="big">640 / 1,000 adet</div>
+              <div class="bar"><span style="width:64%"></span></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ALERTS -->
+        <div class="card">
+          <div class="hd">
+            <h3>Uyarılar</h3>
+            <span class="sub">· bugün</span>
+            <div class="spacer"></div>
+            <button class="btn ghost">Tümü</button>
+          </div>
+          <div class="alerts">
+            <div class="alert">
+              <div class="ic bad">!</div>
+              <div>
+                <div class="tl-title">Üretim başlatılamaz — SO-2026-0181</div>
+                <div class="tl-sub">"Kırmızı iplik 20/2" stokta 120 kg eksik. Satın alma talebi TASLAK.</div>
+              </div>
+            </div>
+            <div class="alert">
+              <div class="ic warn">⚠</div>
+              <div>
+                <div class="tl-title">Kapasite çakışması — Atölye A</div>
+                <div class="tl-sub">28 Nisan için 340 adet aşım. Super Admin onayı gerekli.</div>
+              </div>
+            </div>
+            <div class="alert">
+              <div class="ic info">i</div>
+              <div>
+                <div class="tl-title">Mikro ERP sync</div>
+                <div class="tl-sub">12 kayıt başarıyla gönderildi, 1 çakışma bekliyor.</div>
+              </div>
+            </div>
+            <div class="alert">
+              <div class="ic warn">⚠</div>
+              <div>
+                <div class="tl-title">Kalıp revize riski</div>
+                <div class="tl-sub">SS26-GML-007 — v4, onay sonrası 2. revize.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TABLE + AUDIT -->
+      <div class="row">
+        <div class="card">
+          <div class="hd">
+            <h3>Güncel Siparişler</h3>
+            <span class="sub">· canlı</span>
+            <div class="spacer"></div>
+            <div class="tabs">
+              <div class="tab on">Tümü</div>
+              <div class="tab">Hazır</div>
+              <div class="tab">Malzeme Bekleyen</div>
+              <div class="tab">Atölyede</div>
+            </div>
+          </div>
+          <div style="max-height:360px;overflow:auto">
+          <table>
+            <thead>
+              <tr>
+                <th>Sipariş</th><th>Model</th><th>Müşteri</th><th>Atölye</th>
+                <th>Adet</th><th>İlerleme</th><th>Termin</th><th>Durum</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><b>SO-2026-0181</b></td><td>SS26-KADIN-GOMLEK-001</td><td>Acme</td><td>Atölye A</td>
+                <td>1.200</td><td><div class="bar"><span style="width:18%"></span></div></td>
+                <td>15 May</td><td><span class="status s-malz">● Malzeme Bekleyen</span></td>
+              </tr>
+              <tr>
+                <td><b>SO-2026-0180</b></td><td>SS26-ERKEK-POLO-014</td><td>Nova</td><td>Atölye B</td>
+                <td>800</td><td><div class="bar"><span style="width:62%"></span></div></td>
+                <td>28 Nis</td><td><span class="status s-atolye">● Atölyede</span></td>
+              </tr>
+              <tr>
+                <td><b>SO-2026-0179</b></td><td>SS26-CHLD-TSHIRT-004</td><td>Moda A.Ş.</td><td>Atölye A</td>
+                <td>2.400</td><td><div class="bar"><span style="width:100%"></span></div></td>
+                <td>12 Nis</td><td><span class="status s-kapali">● Kapalı</span></td>
+              </tr>
+              <tr>
+                <td><b>SO-2026-0178</b></td><td>AW26-KADIN-CEKET-002</td><td>Loom</td><td>Atölye A</td>
+                <td>450</td><td><div class="bar"><span style="width:40%"></span></div></td>
+                <td>30 May</td><td><span class="status s-hazir">● Hazır</span></td>
+              </tr>
+              <tr>
+                <td><b>SO-2026-0177</b></td><td>SS26-KADIN-ETEK-006</td><td>Acme</td><td>Atölye C</td>
+                <td>900</td><td><div class="bar"><span style="width:8%"></span></div></td>
+                <td>05 Haz</td><td><span class="status s-bom">● BOM Doğrulama</span></td>
+              </tr>
+              <tr>
+                <td><b>SO-2026-0176</b></td><td>SS26-CHLD-SORT-010</td><td>Nova</td><td>Atölye B</td>
+                <td>600</td><td><div class="bar"><span style="width:0%"></span></div></td>
+                <td>20 May</td><td><span class="status s-taslak">● Taslak</span></td>
+              </tr>
+              <tr>
+                <td><b>SO-2026-0175</b></td><td>AW26-ERKEK-PANTOLON-001</td><td>Loom</td><td>—</td>
+                <td>300</td><td><div class="bar"><span style="width:0%"></span></div></td>
+                <td>—</td><td><span class="status s-iptal">● İptal</span></td>
+              </tr>
+            </tbody>
+          </table>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="hd">
+            <h3>Audit / Akış</h3>
+            <span class="sub">· son hareketler</span>
+            <div class="spacer"></div>
+            <button class="btn ghost">Filtrele</button>
+          </div>
+          <div class="timeline">
+            <div class="tl-item">
+              <div class="tl-dot"></div>
+              <div>
+                <div class="tl-title">SO-2026-0180 → <b>Atölyede</b></div>
+                <div class="tl-sub">Planlama · Seda Y. · "Üretimi Başlat"</div>
+              </div>
+              <div class="tl-time">09:42</div>
+            </div>
+            <div class="tl-item">
+              <div class="tl-dot" style="background:var(--warn);box-shadow:0 0 0 4px #fef3c7"></div>
+              <div>
+                <div class="tl-title">SO-2026-0181 · BOM eksik</div>
+                <div class="tl-sub">Sistem · auto · 3 kalem satın alma talebi taslağı oluşturuldu</div>
+              </div>
+              <div class="tl-time">09:18</div>
+            </div>
+            <div class="tl-item">
+              <div class="tl-dot" style="background:var(--info);box-shadow:0 0 0 4px #e0f2fe"></div>
+              <div>
+                <div class="tl-title">Kalıp v3 yüklendi · SS26-GML-007</div>
+                <div class="tl-sub">Modalist · Ayşe K.</div>
+              </div>
+              <div class="tl-time">08:55</div>
+            </div>
+            <div class="tl-item">
+              <div class="tl-dot" style="background:var(--ok);box-shadow:0 0 0 4px #dcfce7"></div>
+              <div>
+                <div class="tl-title">Model onaylandı · SS26-ETK-006</div>
+                <div class="tl-sub">Tasarım · Emre A.</div>
+              </div>
+              <div class="tl-time">08:30</div>
+            </div>
+            <div class="tl-item">
+              <div class="tl-dot"></div>
+              <div>
+                <div class="tl-title">Mikro ERP → içe aktarım</div>
+                <div class="tl-sub">24 stok kalemi güncellendi, 1 çakışma bekliyor</div>
+              </div>
+              <div class="tl-time">08:12</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+</body>
+</html>
