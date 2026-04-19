@@ -1,0 +1,518 @@
+// ============================================================
+// Tekstil MES — Prisma Schema
+// ER referansı: docs/01-ER-DIAGRAM.md
+// ============================================================
+
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// --------- ENUMS ----------
+
+enum RoleCode {
+  super_admin
+  tasarim
+  modalist
+  planlama
+  satinalma
+  uretim
+}
+
+enum ModelStatus {
+  TASLAK
+  NUMUNE_HAZIRLANIYOR
+  REVIZE
+  ONAYLANDI
+  IPTAL
+}
+
+enum OrderStatus {
+  TASLAK
+  BOM_DOGRULAMA
+  MALZEME_BEKLIYOR
+  HAZIR
+  ATOLYEYE_GONDERILDI
+  KAPALI
+  IPTAL
+}
+
+enum WorkOrderStatus {
+  OLUSTURULDU
+  KESIM
+  DIKIM
+  KALITE
+  PAKETLEME
+  TAMAMLANDI
+  DURAKLADI
+  IPTAL
+}
+
+enum SampleStatus {
+  HAZIRLANIYOR
+  OK
+  REVIZE
+  RED
+}
+
+enum PurchaseRequestStatus {
+  TASLAK
+  ONAY_BEKLIYOR
+  ONAYLI
+  TESLIM_ALINDI
+  IPTAL
+}
+
+enum AuditAction {
+  create
+  update
+  delete
+  transition
+  login
+  logout
+}
+
+enum SyncDirection {
+  IN
+  OUT
+}
+
+enum SyncStatus {
+  PENDING
+  DONE
+  ERROR
+  CONFLICT
+}
+
+enum AttachmentType {
+  teknik_cizim
+  foto
+  kalip
+  diger
+}
+
+enum MaterialType {
+  kumas
+  aksesuar
+  iplik
+  etiket
+  ambalaj
+  diger
+}
+
+// --------- KIMLIK & YETKI ----------
+
+model User {
+  id         String     @id @default(uuid()) @db.Uuid
+  email      String     @unique
+  fullName   String     @map("full_name")
+  isActive   Boolean    @default(true) @map("is_active")
+  createdAt  DateTime   @default(now()) @map("created_at")
+  roles      UserRole[]
+  auditLogs  AuditLog[]
+  patterns   Pattern[]  @relation("PatternAssignee")
+  designedModels Model[] @relation("ModelDesigner")
+  createdOrders  Order[] @relation("OrderCreator")
+
+  @@map("users")
+}
+
+model Role {
+  id    String     @id @default(uuid()) @db.Uuid
+  code  RoleCode   @unique
+  name  String
+  users UserRole[]
+
+  @@map("roles")
+}
+
+model UserRole {
+  userId String @map("user_id") @db.Uuid
+  roleId String @map("role_id") @db.Uuid
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role   Role   @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@id([userId, roleId])
+  @@map("user_role")
+}
+
+model AuditLog {
+  id         BigInt      @id @default(autoincrement())
+  userId     String?     @map("user_id") @db.Uuid
+  entity     String
+  entityId   String      @map("entity_id")
+  action     AuditAction
+  beforeJson Json?       @map("before_json")
+  afterJson  Json?       @map("after_json")
+  ts         DateTime    @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([entity, entityId, ts(sort: Desc)])
+  @@index([ts(sort: Desc)])
+  @@map("audit_log")
+}
+
+// --------- REFERANS ----------
+
+model Customer {
+  id      String  @id @default(uuid()) @db.Uuid
+  code    String  @unique
+  name    String
+  contact String?
+  models  Model[]
+
+  @@map("customers")
+}
+
+model Season {
+  id       String   @id @default(uuid()) @db.Uuid
+  code     String   @unique
+  startsAt DateTime @map("starts_at")
+  endsAt   DateTime @map("ends_at")
+  models   Model[]
+
+  @@map("seasons")
+}
+
+model Color {
+  id       String         @id @default(uuid()) @db.Uuid
+  code     String         @unique
+  name     String
+  hex      String?
+  variants OrderVariant[]
+
+  @@map("colors")
+}
+
+model Size {
+  id         String         @id @default(uuid()) @db.Uuid
+  code       String         @unique
+  orderIndex Int            @map("order_index")
+  variants   OrderVariant[]
+
+  @@map("sizes")
+}
+
+model Workshop {
+  id                String                 @id @default(uuid()) @db.Uuid
+  code              String                 @unique
+  name              String
+  dailyCapacityPcs  Int                    @map("daily_capacity_pcs")
+  maxBatchPcs       Int                    @default(500) @map("max_batch_pcs")
+  orders            Order[]
+  capacityDays      WorkshopCapacityDay[]
+
+  @@map("workshops")
+}
+
+model WorkshopCapacityDay {
+  id         BigInt   @id @default(autoincrement())
+  workshopId String   @map("workshop_id") @db.Uuid
+  day        DateTime @db.Date
+  bookedPcs  Int      @default(0) @map("booked_pcs")
+  workshop   Workshop @relation(fields: [workshopId], references: [id], onDelete: Cascade)
+
+  @@unique([workshopId, day])
+  @@map("workshop_capacity_day")
+}
+
+model Supplier {
+  id       String            @id @default(uuid()) @db.Uuid
+  code     String            @unique
+  name     String
+  contact  String?
+  requests PurchaseRequest[]
+  materials Material[]       @relation("MaterialDefaultSupplier")
+
+  @@map("suppliers")
+}
+
+// --------- TASARIM / MODEL ----------
+
+model Model {
+  id         String      @id @default(uuid()) @db.Uuid
+  code       String      @unique
+  name       String
+  customerId String      @map("customer_id") @db.Uuid
+  seasonId   String      @map("season_id") @db.Uuid
+  category   String
+  designerId String?     @map("designer_id") @db.Uuid
+  dueDate    DateTime?   @map("due_date")
+  status     ModelStatus @default(TASLAK)
+  createdAt  DateTime    @default(now()) @map("created_at")
+
+  customer    Customer          @relation(fields: [customerId], references: [id])
+  season      Season            @relation(fields: [seasonId], references: [id])
+  designer    User?             @relation("ModelDesigner", fields: [designerId], references: [id])
+  attachments ModelAttachment[]
+  samples     Sample[]
+  patterns    Pattern[]
+  boms        Bom[]
+  orders      Order[]
+
+  @@index([status, dueDate])
+  @@map("model")
+}
+
+model ModelAttachment {
+  id         String         @id @default(uuid()) @db.Uuid
+  modelId    String         @map("model_id") @db.Uuid
+  type       AttachmentType
+  fileUrl    String         @map("file_url")
+  uploadedBy String?        @map("uploaded_by") @db.Uuid
+  ts         DateTime       @default(now())
+
+  model Model @relation(fields: [modelId], references: [id], onDelete: Cascade)
+
+  @@index([modelId])
+  @@map("model_attachment")
+}
+
+model Sample {
+  id             String       @id @default(uuid()) @db.Uuid
+  modelId        String       @map("model_id") @db.Uuid
+  fabricNote     String?      @map("fabric_note")
+  accessoryNote  String?      @map("accessory_note")
+  qualityNote    String?      @map("quality_note")
+  criticalNotes  String?      @map("critical_notes")
+  status         SampleStatus @default(HAZIRLANIYOR)
+  createdAt      DateTime     @default(now()) @map("created_at")
+
+  model Model @relation(fields: [modelId], references: [id], onDelete: Cascade)
+
+  @@map("sample")
+}
+
+// --------- KALIP ----------
+
+model Pattern {
+  id             String           @id @default(uuid()) @db.Uuid
+  modelId        String           @map("model_id") @db.Uuid
+  assignedTo     String?          @map("assigned_to") @db.Uuid
+  startedAt      DateTime?        @map("started_at")
+  closedAt       DateTime?        @map("closed_at")
+  totalRevisions Int              @default(0) @map("total_revisions")
+  model          Model            @relation(fields: [modelId], references: [id], onDelete: Cascade)
+  assignee       User?            @relation("PatternAssignee", fields: [assignedTo], references: [id])
+  versions       PatternVersion[]
+
+  @@index([modelId])
+  @@map("pattern")
+}
+
+model PatternVersion {
+  id        String   @id @default(uuid()) @db.Uuid
+  patternId String   @map("pattern_id") @db.Uuid
+  versionNo Int      @map("version_no")
+  fileUrl   String?  @map("file_url")
+  note      String?
+  createdBy String?  @map("created_by") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+
+  pattern Pattern @relation(fields: [patternId], references: [id], onDelete: Cascade)
+
+  @@unique([patternId, versionNo])
+  @@map("pattern_version")
+}
+
+// --------- SIPARIS / IS EMRI ----------
+
+model Order {
+  id         String      @id @default(uuid()) @db.Uuid
+  code       String      @unique
+  modelId    String      @map("model_id") @db.Uuid
+  workshopId String?     @map("workshop_id") @db.Uuid
+  totalQty   Int         @map("total_qty")
+  dueDate    DateTime?   @map("due_date")
+  status     OrderStatus @default(TASLAK)
+  createdBy  String?     @map("created_by") @db.Uuid
+  createdAt  DateTime    @default(now()) @map("created_at")
+
+  model       Model           @relation(fields: [modelId], references: [id])
+  workshop    Workshop?       @relation(fields: [workshopId], references: [id])
+  creator     User?           @relation("OrderCreator", fields: [createdBy], references: [id])
+  variants    OrderVariant[]
+  workOrders  WorkOrder[]
+  purchaseReqs PurchaseRequest[]
+
+  @@index([status, dueDate])
+  @@map("order")
+}
+
+model OrderVariant {
+  id      String @id @default(uuid()) @db.Uuid
+  orderId String @map("order_id") @db.Uuid
+  colorId String @map("color_id") @db.Uuid
+  sizeId  String @map("size_id") @db.Uuid
+  qty     Int
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  color Color @relation(fields: [colorId], references: [id])
+  size  Size  @relation(fields: [sizeId], references: [id])
+
+  @@unique([orderId, colorId, sizeId])
+  @@map("order_variant")
+}
+
+model WorkOrder {
+  id                String           @id @default(uuid()) @db.Uuid
+  code              String           @unique
+  orderId           String           @map("order_id") @db.Uuid
+  parentWorkOrderId String?          @map("parent_work_order_id") @db.Uuid
+  qty               Int
+  status            WorkOrderStatus  @default(OLUSTURULDU)
+  startedAt         DateTime?        @map("started_at")
+  finishedAt        DateTime?        @map("finished_at")
+  createdAt         DateTime         @default(now()) @map("created_at")
+
+  order         Order             @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  parent        WorkOrder?        @relation("WorkOrderSplit", fields: [parentWorkOrderId], references: [id])
+  children      WorkOrder[]       @relation("WorkOrderSplit")
+  events        WorkOrderEvent[]
+
+  @@index([orderId])
+  @@index([status])
+  @@map("work_order")
+}
+
+model WorkOrderEvent {
+  id          BigInt           @id @default(autoincrement())
+  workOrderId String           @map("work_order_id") @db.Uuid
+  fromStatus  WorkOrderStatus? @map("from_status")
+  toStatus    WorkOrderStatus  @map("to_status")
+  reason      String?
+  userId      String?          @map("user_id") @db.Uuid
+  ts          DateTime         @default(now())
+
+  workOrder WorkOrder @relation(fields: [workOrderId], references: [id], onDelete: Cascade)
+
+  @@index([workOrderId, ts(sort: Desc)])
+  @@map("work_order_event")
+}
+
+// --------- BOM / STOK / SATINALMA ----------
+
+model Material {
+  id                String                 @id @default(uuid()) @db.Uuid
+  code              String                 @unique
+  name              String
+  type              MaterialType
+  uom               String
+  supplierDefaultId String?                @map("supplier_default_id") @db.Uuid
+  defaultSupplier   Supplier?              @relation("MaterialDefaultSupplier", fields: [supplierDefaultId], references: [id])
+  stock             Stock?
+  bomItems          BomItem[]
+  prItems           PurchaseRequestItem[]
+
+  @@map("material")
+}
+
+model Stock {
+  id          String   @id @default(uuid()) @db.Uuid
+  materialId  String   @unique @map("material_id") @db.Uuid
+  warehouse   String   @default("MERKEZ")
+  qtyOnHand   Decimal  @default(0) @map("qty_on_hand") @db.Decimal(14, 3)
+  qtyReserved Decimal  @default(0) @map("qty_reserved") @db.Decimal(14, 3)
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  material Material @relation(fields: [materialId], references: [id], onDelete: Cascade)
+
+  @@map("stock")
+}
+
+model Bom {
+  id        String    @id @default(uuid()) @db.Uuid
+  modelId   String    @map("model_id") @db.Uuid
+  version   Int       @default(1)
+  isActive  Boolean   @default(true) @map("is_active")
+  createdBy String?   @map("created_by") @db.Uuid
+  createdAt DateTime  @default(now()) @map("created_at")
+  items     BomItem[]
+  model     Model     @relation(fields: [modelId], references: [id], onDelete: Cascade)
+
+  @@unique([modelId, version])
+  @@map("bom")
+}
+
+model BomItem {
+  id          String  @id @default(uuid()) @db.Uuid
+  bomId       String  @map("bom_id") @db.Uuid
+  materialId  String  @map("material_id") @db.Uuid
+  qtyPerUnit  Decimal @map("qty_per_unit") @db.Decimal(14, 4)
+  uom         String
+  wastePct    Decimal @default(0) @map("waste_pct") @db.Decimal(5, 2)
+
+  bom      Bom      @relation(fields: [bomId], references: [id], onDelete: Cascade)
+  material Material @relation(fields: [materialId], references: [id])
+
+  @@index([bomId])
+  @@map("bom_item")
+}
+
+model PurchaseRequest {
+  id         String                 @id @default(uuid()) @db.Uuid
+  code       String                 @unique
+  orderId    String?                @map("order_id") @db.Uuid
+  supplierId String?                @map("supplier_id") @db.Uuid
+  status     PurchaseRequestStatus  @default(TASLAK)
+  dueDate    DateTime?              @map("due_date")
+  createdBy  String?                @map("created_by") @db.Uuid
+  createdAt  DateTime               @default(now()) @map("created_at")
+  items      PurchaseRequestItem[]
+
+  order    Order?    @relation(fields: [orderId], references: [id])
+  supplier Supplier? @relation(fields: [supplierId], references: [id])
+
+  @@index([status])
+  @@map("purchase_request")
+}
+
+model PurchaseRequestItem {
+  id                String   @id @default(uuid()) @db.Uuid
+  purchaseRequestId String   @map("purchase_request_id") @db.Uuid
+  materialId        String   @map("material_id") @db.Uuid
+  qty               Decimal  @db.Decimal(14, 3)
+  unitPrice         Decimal? @map("unit_price") @db.Decimal(14, 2)
+  note              String?
+
+  request  PurchaseRequest @relation(fields: [purchaseRequestId], references: [id], onDelete: Cascade)
+  material Material        @relation(fields: [materialId], references: [id])
+
+  @@map("purchase_request_item")
+}
+
+// --------- ENTEGRASYON ----------
+
+model SyncMapping {
+  id           BigInt   @id @default(autoincrement())
+  entity       String
+  localId      String   @map("local_id")
+  mikroId      String   @map("mikro_id")
+  hash         String?
+  lastPulledAt DateTime? @map("last_pulled_at")
+  lastPushedAt DateTime? @map("last_pushed_at")
+
+  @@unique([entity, localId])
+  @@unique([entity, mikroId])
+  @@map("sync_mapping")
+}
+
+model SyncQueue {
+  id        BigInt        @id @default(autoincrement())
+  direction SyncDirection
+  entity    String
+  payload   Json
+  status    SyncStatus    @default(PENDING)
+  attempts  Int           @default(0)
+  error     String?
+  ts        DateTime      @default(now())
+
+  @@index([status, ts])
+  @@map("sync_queue")
+}

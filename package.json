@@ -1,0 +1,27 @@
+{
+  "name": "tekstil-mes",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "pnpm@9.0.0",
+  "scripts": {
+    "dev": "pnpm --filter @tekstil/web dev",
+    "build": "pnpm -r build",
+    "lint": "pnpm -r lint",
+    "typecheck": "pnpm -r typecheck",
+    "db:generate": "pnpm --filter @tekstil/db generate",
+    "db:migrate": "pnpm --filter @tekstil/db migrate",
+    "db:seed": "pnpm --filter @tekstil/db seed",
+    "db:reset": "pnpm --filter @tekstil/db reset",
+    "docker:up": "docker compose up -d",
+    "docker:down": "docker compose down"
+  },
+  "devDependencies": {
+    "typescript": "5.5.4",
+    "@types/node": "20.14.10",
+    "prettier": "3.3.3"
+  },
+  "engines": {
+    "node": ">=20.11.0",
+    "pnpm": ">=9.0.0"
+  }
+}

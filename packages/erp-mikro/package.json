@@ -1,0 +1,23 @@
+{
+  "name": "@tekstil/erp-mikro",
+  "version": "0.1.0",
+  "private": true,
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@tekstil/contracts": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "5.5.4",
+    "@types/node": "20.14.10"
+  },
+  "peerDependencies": {
+    "mssql": "*"
+  },
+  "peerDependenciesMeta": {
+    "mssql": { "optional": true }
+  }
+}

@@ -2,7 +2,7 @@
 
 Endüstri 4.0 tabanlı, tekstil sektörüne özel, Odoo Üretim modülü esintili uçtan uca üretim takip platformu.
 
-> Durum: **Faz 0 – Mimari ve İskelet**. Bu aşamada ER modeli, state-machine ve dashboard mockup teslim edilmiştir. Henüz canlı backend/DB kurulmamıştır.
+> Durum: **Faz 1 – Monorepo iskeleti, Prisma şeması, Auth, RBAC ve canlı Dashboard**. Mikro ERP adaptörü dummy modda çalışıyor; v16 MSSQL implementasyonu Faz 6'da.
 
 ---
 
@@ -88,8 +88,45 @@ Endüstri 4.0 tabanlı, tekstil sektörüne özel, Odoo Üretim modülü esintil
 
 ---
 
-## 6. Mevcut Teslimler (Faz 0)
+## 6. Mevcut Teslimler
 
+### Faz 0 — Mimari (docs + mockup)
 - [`docs/01-ER-DIAGRAM.md`](docs/01-ER-DIAGRAM.md) — Veri modeli (Mermaid ER + tablo açıklamaları)
 - [`docs/02-STATE-MACHINE.md`](docs/02-STATE-MACHINE.md) — "Taslak → Atölye" durum geçiş mantığı + guard kuralları
-- [`mockup/dashboard.html`](mockup/dashboard.html) — Odoo-benzeri ortak takip ekranı (tek dosya, tarayıcıda açılır)
+- [`docs/03-DECISIONS.md`](docs/03-DECISIONS.md) — Kararlar ve varsayılanlar
+- [`mockup/dashboard.html`](mockup/dashboard.html) — Odoo-benzeri statik ortak takip ekranı
+
+### Faz 1 — Çalışan iskelet (kod)
+- **Monorepo:** `pnpm-workspace.yaml`, `tsconfig.base.json`, `docker-compose.yml` (Postgres 16 + Redis)
+- **`packages/db`:** Prisma şeması (tüm tablolar), seed (Super Admin + 6 demo kullanıcı + ürün/sipariş/stok/BOM/PR)
+- **`packages/contracts`:** Role matrisi, Model/Order/WorkOrder state machines, Zod DTO'ları, kod formatları (`SO-YYYY-NNNNNN`, `WO-YYYY-NNNNNN-PP`)
+- **`packages/erp-mikro`:** Adaptör arayüzü + `DummyMikroAdapter` (çalışır) + `MssqlMikroAdapter` (v16 iskeleti)
+- **`apps/web`:** Next.js 14 App Router + Tailwind + shadcn-benzeri tema
+  - Magic link girişi + **beyaz liste** (Supabase Auth)
+  - Middleware ile route koruma
+  - `getSessionUser()` → DB'deki `users/user_role` ile zenginleşir, çoklu rol destekli
+  - Dashboard (canlı Prisma verisiyle), Modeller, Siparişler sayfaları
+  - Odoo-benzeri sidebar + topbar + KPI kartları + süreç çarkları
+
+---
+
+## 7. Çalıştırma (Yerel)
+
+```bash
+# 0) Bağımlılıklar
+pnpm install
+
+# 1) Postgres + Redis
+cp .env.example .env   # SUPABASE_* ve SUPER_ADMIN_EMAIL değerlerini doldur
+pnpm docker:up
+
+# 2) Prisma
+pnpm db:generate
+pnpm db:migrate        # ilk migration'ı oluşturur
+pnpm db:seed           # dummy veri
+
+# 3) Uygulama
+pnpm dev               # http://localhost:3000
+```
+
+İlk girişte `SUPER_ADMIN_EMAIL` adresiyle magic link isteyin; mail gelen linkle `/dashboard`'a yönlenirsiniz. Sistemde tanımsız e-posta ile giriş denemeleri sessizce reddedilir.
