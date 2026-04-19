@@ -38,7 +38,9 @@ export default async function ModelsPage() {
           <tbody>
             {models.map((m) => (
               <tr key={m.id} className="hover:bg-gray-50">
-                <td className="p-2.5 text-sm font-bold border-b border-gray-200">{m.code}</td>
+                <td className="p-2.5 text-sm font-bold border-b border-gray-200">
+                  <a href={`/models/${m.id}`} className="hover:text-brand hover:underline">{m.code}</a>
+                </td>
                 <td className="p-2.5 text-sm border-b border-gray-200">{m.name}</td>
                 <td className="p-2.5 text-sm border-b border-gray-200">{m.customer.name}</td>
                 <td className="p-2.5 text-sm border-b border-gray-200">{m.season.code}</td>

@@ -35,7 +35,9 @@ export default async function OrdersPage() {
           <tbody>
             {orders.map((o) => (
               <tr key={o.id} className="hover:bg-gray-50">
-                <td className="p-2.5 text-sm font-bold border-b border-gray-200">{o.code}</td>
+                <td className="p-2.5 text-sm font-bold border-b border-gray-200">
+                  <a href={`/orders/${o.id}`} className="hover:text-brand hover:underline">{o.code}</a>
+                </td>
                 <td className="p-2.5 text-sm border-b border-gray-200">{o.model.code}</td>
                 <td className="p-2.5 text-sm border-b border-gray-200">{o.model.customer.name}</td>
                 <td className="p-2.5 text-sm border-b border-gray-200">{o.workshop?.name ?? '—'}</td>

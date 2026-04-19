@@ -30,7 +30,7 @@ stateDiagram-v2
 |---|---|---|
 | `submit_for_sample` | Tasarım | `model.name`, `customer_id`, `season_id`, `due_date`, en az 1 `model_attachment (teknik_cizim)` |
 | `request_revision` | Modalist / Tasarım | `sample.critical_notes` doldurulmuş olmalı |
-| `approve` | Tasarım + Modalist imzası (2-aşamalı) | Aktif `pattern_version` var; `sample.status = OK` |
+| `approve` | Tasarım (tek onay) | Aktif `pattern_version` var; `sample.status = OK` |
 | `cancel` | Tasarım / Super Admin | `reason` alanı zorunlu; ilgili aktif `order` yoksa |
 
 ---
@@ -115,7 +115,7 @@ stateDiagram-v2
 | 3 | Modalist | Kalıp v1 yükler, kritik not ekler | `pattern_version(v=1)` oluşur; `pattern.total_revisions = 1` |
 | 4 | Tasarım | Revize ister | `NUMUNE_HAZIRLANIYOR → REVIZE` |
 | 5 | Modalist | v2 yükler | `REVIZE → NUMUNE_HAZIRLANIYOR`, version_no=2 |
-| 6 | Tasarım + Modalist | Onay | `→ ONAYLANDI`. Planlama bildirimi. |
+| 6 | Tasarım | Onay (tek onay) | `→ ONAYLANDI`. Planlama bildirimi. |
 | 7 | Planlama | Sipariş açar (3 renk × 4 beden, 1200 adet, termin 30 gün) | `order.status = TASLAK → BOM_DOGRULAMA` (`save`) |
 | 8 | Sistem | BOM kontrolü | Kırmızı iplik eksik. `order → MALZEME_BEKLIYOR`, otomatik `purchase_request(TASLAK)` kalemi hazırlar |
 | 9 | Satın Alma | Talebi `ONAYLI` yapar | `order → HAZIR`, `stock.qty_reserved` güncellenir |
