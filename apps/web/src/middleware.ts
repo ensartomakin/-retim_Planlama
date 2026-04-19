@@ -1,7 +1,8 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 
-const PUBLIC_PATHS = ['/login', '/auth/callback', '/api/health'];
+const PUBLIC_PATHS = ['/login', '/auth/callback', '/api/health', '/api/dev'];
+const DEV_MODE = process.env.DEV_MODE === 'true';
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
@@ -13,6 +14,10 @@ export async function middleware(req: NextRequest) {
     pathname.startsWith('/favicon') ||
     pathname.startsWith('/api/auth')
   ) {
+    return NextResponse.next();
+  }
+
+  if (DEV_MODE) {
     return NextResponse.next();
   }
 

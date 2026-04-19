@@ -2,7 +2,6 @@
 
 import { revalidatePath } from 'next/cache';
 import { prisma } from '@tekstil/db';
-import type { Prisma } from '@tekstil/db';
 import { requireUser } from '@/lib/auth/session';
 import { withAudit } from '@/lib/audit';
 import { canWrite } from '@tekstil/contracts';

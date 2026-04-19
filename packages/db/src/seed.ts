@@ -169,18 +169,22 @@ async function main() {
       status: ModelStatus.ONAYLANDI,
     },
   });
-  await prisma.sample.create({
-    data: {
-      modelId: model1.id,
-      fabricNote: 'Pamuk süprem 1x1, 180 gr',
-      accessoryNote: 'Düğme 12mm x 7 adet',
-      qualityNote: 'OEKO-TEX',
-      criticalNotes: 'Kırmızı iplik kritik stok',
-      status: SampleStatus.OK,
-    },
-  });
+  const existingSample = await prisma.sample.findFirst({ where: { modelId: model1.id } });
+  if (!existingSample) {
+    await prisma.sample.create({
+      data: {
+        modelId: model1.id,
+        fabricNote: 'Pamuk süprem 1x1, 180 gr',
+        accessoryNote: 'Düğme 12mm x 7 adet',
+        qualityNote: 'OEKO-TEX',
+        criticalNotes: 'Kırmızı iplik kritik stok',
+        status: SampleStatus.OK,
+      },
+    });
+  }
 
-  const pattern1 = await prisma.pattern.create({
+  const existingPattern = await prisma.pattern.findFirst({ where: { modelId: model1.id } });
+  const pattern1 = existingPattern ?? await prisma.pattern.create({
     data: {
       modelId: model1.id,
       assignedTo: users['ayse@demo.local']!.id,
@@ -188,36 +192,43 @@ async function main() {
       totalRevisions: 2,
     },
   });
-  for (const v of [1, 2]) {
-    await prisma.patternVersion.create({
+  const existingVersions = await prisma.patternVersion.count({ where: { patternId: pattern1.id } });
+  if (existingVersions === 0) {
+    for (const v of [1, 2]) {
+      await prisma.patternVersion.create({
+        data: {
+          patternId: pattern1.id,
+          versionNo: v,
+          note: `Revize ${v}`,
+          createdBy: users['ayse@demo.local']!.id,
+        },
+      });
+    }
+  }
+
+  const existingBom = await prisma.bom.findFirst({ where: { modelId: model1.id } });
+  if (!existingBom) {
+    await prisma.bom.create({
       data: {
-        patternId: pattern1.id,
-        versionNo: v,
-        note: `Revize ${v}`,
-        createdBy: users['ayse@demo.local']!.id,
+        modelId: model1.id,
+        version: 1,
+        isActive: true,
+        createdBy: users['tasarim@demo.local']!.id,
+        items: {
+          create: [
+            { materialId: materials[0]!.id, qtyPerUnit: 0.15, uom: 'kg', wastePct: 5 },
+            { materialId: materials[1]!.id, qtyPerUnit: 1.8, uom: 'm', wastePct: 8 },
+            { materialId: materials[2]!.id, qtyPerUnit: 7, uom: 'adet', wastePct: 2 },
+            { materialId: materials[3]!.id, qtyPerUnit: 1, uom: 'adet', wastePct: 0 },
+          ],
+        },
       },
     });
   }
 
-  const bom1 = await prisma.bom.create({
-    data: {
-      modelId: model1.id,
-      version: 1,
-      isActive: true,
-      createdBy: users['tasarim@demo.local']!.id,
-      items: {
-        create: [
-          { materialId: materials[0]!.id, qtyPerUnit: 0.15, uom: 'kg', wastePct: 5 },
-          { materialId: materials[1]!.id, qtyPerUnit: 1.8, uom: 'm', wastePct: 8 },
-          { materialId: materials[2]!.id, qtyPerUnit: 7, uom: 'adet', wastePct: 2 },
-          { materialId: materials[3]!.id, qtyPerUnit: 1, uom: 'adet', wastePct: 0 },
-        ],
-      },
-    },
-  });
-
   console.log('→ Sipariş (malzeme bekleyen örnek)');
-  const order1 = await prisma.order.create({
+  const existingOrder = await prisma.order.findUnique({ where: { code: 'SO-2026-000181' } });
+  const order1 = existingOrder ?? await prisma.order.create({
     data: {
       code: 'SO-2026-000181',
       modelId: model1.id,
@@ -236,32 +247,38 @@ async function main() {
     },
   });
 
-  await prisma.purchaseRequest.create({
-    data: {
-      code: 'PR-2026-000041',
-      orderId: order1.id,
-      supplierId: suppliers[0]!.id,
-      status: 'TASLAK',
-      dueDate: new Date('2026-04-25'),
-      createdBy: users['mehmet@demo.local']!.id,
-      items: {
-        create: [
-          { materialId: materials[0]!.id, qty: 130, note: '1200 adet için kırmızı iplik' },
-        ],
+  const existingPR = await prisma.purchaseRequest.findUnique({ where: { code: 'PR-2026-000041' } });
+  if (!existingPR) {
+    await prisma.purchaseRequest.create({
+      data: {
+        code: 'PR-2026-000041',
+        orderId: order1.id,
+        supplierId: suppliers[0]!.id,
+        status: 'TASLAK',
+        dueDate: new Date('2026-04-25'),
+        createdBy: users['mehmet@demo.local']!.id,
+        items: {
+          create: [
+            { materialId: materials[0]!.id, qty: 130, note: '1200 adet için kırmızı iplik' },
+          ],
+        },
       },
-    },
-  });
+    });
+  }
 
-  console.log('→ Audit örneği');
-  await prisma.auditLog.create({
-    data: {
-      userId: users['seda@demo.local']!.id,
-      entity: 'order',
-      entityId: order1.id,
-      action: 'transition',
-      afterJson: { from: 'BOM_DOGRULAMA', to: 'MALZEME_BEKLIYOR', reason: 'auto' },
-    },
-  });
+  const existingAudit = await prisma.auditLog.findFirst({ where: { entity: 'order', entityId: order1.id } });
+  if (!existingAudit) {
+    console.log('→ Audit örneği');
+    await prisma.auditLog.create({
+      data: {
+        userId: users['seda@demo.local']!.id,
+        entity: 'order',
+        entityId: order1.id,
+        action: 'transition',
+        afterJson: { from: 'BOM_DOGRULAMA', to: 'MALZEME_BEKLIYOR', reason: 'auto' },
+      },
+    });
+  }
 
   console.log('✓ Seed tamamlandı.');
 }

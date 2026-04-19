@@ -2,7 +2,11 @@ import { redirect } from 'next/navigation';
 import { getSessionUser } from '@/lib/auth/session';
 import { SignOutButton } from '@/components/sign-out-button';
 import { NavLink } from '@/components/nav-link';
+import { DevUserSwitcher } from '@/components/dev-user-switcher';
+import { prisma } from '@tekstil/db';
 import type { RoleCode } from '@tekstil/contracts';
+
+const DEV_MODE = process.env.DEV_MODE === 'true';
 
 const NAV = [
   {
@@ -53,8 +57,37 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     .slice(0, 2)
     .toUpperCase();
 
+  const devUsers = DEV_MODE
+    ? await prisma.user.findMany({
+        where: { isActive: true },
+        select: {
+          email: true,
+          fullName: true,
+          roles: { include: { role: { select: { code: true } } } },
+        },
+        orderBy: { fullName: 'asc' },
+      })
+    : [];
+
   return (
-    <div className="grid grid-cols-[240px_1fr] min-h-screen max-[1100px]:grid-cols-1">
+    <>
+      {DEV_MODE && (
+        <div className="bg-amber-500 text-black text-xs font-bold px-4 py-1.5 flex items-center justify-between gap-4 sticky top-0 z-20">
+          <span>
+            ⚠ DEV MODE aktif — kimlik doğrulama atlanıyor. Prod için{' '}
+            <code className="bg-black/10 px-1 rounded">DEV_MODE=false</code>.
+          </span>
+          <DevUserSwitcher
+            currentEmail={user.email}
+            users={devUsers.map((u) => ({
+              email: u.email,
+              fullName: u.fullName,
+              roles: u.roles.map((r) => r.role.code),
+            }))}
+          />
+        </div>
+      )}
+      <div className="grid grid-cols-[240px_1fr] min-h-screen max-[1100px]:grid-cols-1">
       <aside className="bg-[#0f1115] text-gray-300 p-4 sticky top-0 h-screen overflow-y-auto max-[1100px]:hidden">
         <div className="flex items-center gap-2.5 text-white font-bold mb-5">
           <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-brand to-brand-400 grid place-items-center font-extrabold text-sm">
@@ -110,6 +143,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
         <div className="p-5 flex-1">{children}</div>
       </main>
-    </div>
+      </div>
+    </>
   );
 }
