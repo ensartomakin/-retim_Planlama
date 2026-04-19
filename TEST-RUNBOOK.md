@@ -37,7 +37,7 @@ pnpm db:seed
 pnpm dev
 ```
 
-→ [http://localhost:3000](http://localhost:3000)
+→ [http://localhost:3001](http://localhost:3001)
 
 ## 2. DEV MODE nasıl çalışır?
 
