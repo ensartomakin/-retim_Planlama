@@ -21,6 +21,7 @@ export default async function ModelsPage() {
         <h1 className="text-xl font-bold">Modeller</h1>
         <span className="text-sm text-ink-3">{models.length} kayıt</span>
         <div className="flex-1" />
+        <a href="/api/export/models" className="btn">⤓ Excel</a>
         {writable && <button className="btn-primary">+ Yeni Model</button>}
       </div>
 

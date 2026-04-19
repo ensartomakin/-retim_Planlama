@@ -1,27 +1,36 @@
 import { redirect } from 'next/navigation';
-import Link from 'next/link';
 import { getSessionUser } from '@/lib/auth/session';
 import { SignOutButton } from '@/components/sign-out-button';
+import { NavLink } from '@/components/nav-link';
 import type { RoleCode } from '@tekstil/contracts';
 
 const NAV = [
-  { section: 'Ana', items: [
-    { href: '/dashboard', label: 'Dashboard', roles: null },
-    { href: '/models', label: 'Modeller', roles: null },
-    { href: '/patterns', label: 'Kalıplar', roles: null },
-    { href: '/orders', label: 'Siparişler', roles: null },
-    { href: '/work-orders', label: 'İş Emirleri', roles: null },
-  ] },
-  { section: 'Tedarik', items: [
-    { href: '/bom', label: 'Reçete (BOM)', roles: null },
-    { href: '/purchase', label: 'Satın Alma', roles: null },
-    { href: '/stock', label: 'Stok', roles: null },
-  ] },
-  { section: 'Sistem', items: [
-    { href: '/reports', label: 'Raporlar', roles: null },
-    { href: '/audit', label: 'Audit Log', roles: null },
-    { href: '/users', label: 'Kullanıcılar', roles: ['super_admin'] as RoleCode[] },
-  ] },
+  {
+    section: 'Ana',
+    items: [
+      { href: '/dashboard', label: '◈ Dashboard', roles: null },
+      { href: '/models', label: '● Modeller', roles: null },
+      { href: '/patterns', label: '● Kalıplar', roles: null },
+      { href: '/orders', label: '● Siparişler', roles: null },
+      { href: '/work-orders', label: '● İş Emirleri', roles: null },
+    ],
+  },
+  {
+    section: 'Tedarik',
+    items: [
+      { href: '/bom', label: '● Reçete (BOM)', roles: null },
+      { href: '/purchase', label: '● Satın Alma', roles: null },
+      { href: '/stock', label: '● Stok', roles: null },
+    ],
+  },
+  {
+    section: 'Sistem',
+    items: [
+      { href: '/reports', label: '● Raporlar', roles: null },
+      { href: '/audit', label: '● Audit Log', roles: null },
+      { href: '/users', label: '● Kullanıcılar', roles: ['super_admin'] as RoleCode[] },
+    ],
+  },
 ] as const;
 
 const ROLE_LABEL: Record<RoleCode, string> = {
@@ -46,9 +55,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   return (
     <div className="grid grid-cols-[240px_1fr] min-h-screen max-[1100px]:grid-cols-1">
-      <aside className="bg-[#0f1115] text-gray-300 p-4 sticky top-0 h-screen max-[1100px]:hidden">
+      <aside className="bg-[#0f1115] text-gray-300 p-4 sticky top-0 h-screen overflow-y-auto max-[1100px]:hidden">
         <div className="flex items-center gap-2.5 text-white font-bold mb-5">
-          <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-brand to-brand-400 grid place-items-center font-extrabold">
+          <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-brand to-brand-400 grid place-items-center font-extrabold text-sm">
             T
           </div>
           Tekstil MES
@@ -60,44 +69,46 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             </div>
             <nav className="flex flex-col gap-0.5">
               {group.items
-                .filter((i) => !i.roles || i.roles.some((r) => user.roles.includes(r)) || user.roles.includes('super_admin'))
+                .filter(
+                  (i) =>
+                    !i.roles ||
+                    i.roles.some((r) => user.roles.includes(r)) ||
+                    user.roles.includes('super_admin'),
+                )
                 .map((i) => (
-                  <Link
-                    key={i.href}
-                    href={i.href as any}
-                    className="px-2.5 py-2 rounded-lg text-slate-300 font-medium text-sm hover:bg-gray-900 hover:text-white"
-                  >
-                    ● {i.label}
-                  </Link>
+                  <NavLink key={i.href} href={i.href}>
+                    {i.label}
+                  </NavLink>
                 ))}
             </nav>
           </div>
         ))}
+        <div className="mt-6 border-t border-gray-800 pt-4">
+          <div className="text-xs text-gray-500 px-2 mb-1">{user.fullName}</div>
+          <div className="text-[11px] text-gray-600 px-2">{user.email}</div>
+        </div>
       </aside>
 
-      <main className="flex flex-col">
+      <main className="flex flex-col min-h-screen">
         <header className="sticky top-0 z-10 bg-white border-b border-gray-200 flex items-center gap-3 px-5 py-2.5">
-          <div className="text-xs text-ink-3">
-            Ana &rsaquo; <b className="text-ink">Ortak Takip</b>
-          </div>
-          <div className="flex-1 max-w-md ml-3 relative">
+          <div className="flex-1 max-w-sm relative">
             <input
               placeholder="Model, sipariş no, barkod ara..."
-              className="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 rounded-lg bg-gray-50 focus:outline-none focus:border-brand"
+              className="w-full pl-8 pr-3 py-1.5 text-sm border border-gray-200 rounded-lg bg-gray-50 focus:outline-none focus:border-brand"
             />
-            <span className="absolute left-3 top-2 text-ink-3">⌕</span>
+            <span className="absolute left-2.5 top-1.5 text-ink-3 text-base">⌕</span>
           </div>
           <div className="flex-1" />
-          <span className="chip bg-brand-100 text-brand-700">
+          <span className="chip bg-brand-100 text-brand-700 hidden sm:inline-flex">
             {user.roles.map((r) => ROLE_LABEL[r]).join(' + ')}
           </span>
-          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-200 to-pink-200 grid place-items-center font-bold text-sm">
+          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-200 to-pink-200 grid place-items-center font-bold text-sm flex-shrink-0">
             {initials}
           </div>
           <SignOutButton />
         </header>
 
-        <div className="p-5">{children}</div>
+        <div className="p-5 flex-1">{children}</div>
       </main>
     </div>
   );
