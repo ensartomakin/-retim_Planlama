@@ -2,7 +2,17 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 
 const PUBLIC_PATHS = ['/login', '/auth/callback', '/api/health', '/api/dev'];
-const DEV_MODE = process.env.DEV_MODE === 'true';
+
+// Edge runtime'da NEXT_PUBLIC_* değişkenler güvenilir okunur.
+// Supabase URL placeholder ise ya da DEV_MODE=true ise auth bypass.
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? '';
+const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '';
+const DEV_MODE =
+  process.env.DEV_MODE === 'true' ||
+  !supabaseUrl ||
+  supabaseUrl === 'http://localhost:54321' ||
+  supabaseKey === 'eyJhbGciOi...' ||
+  !supabaseKey;
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
