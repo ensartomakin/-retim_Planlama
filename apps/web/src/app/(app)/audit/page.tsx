@@ -1,6 +1,10 @@
-import { prisma } from '@tekstil/db';
+import { prisma, Prisma } from '@tekstil/db';
 
 export const dynamic = 'force-dynamic';
+
+type AuditLogWithUser = Prisma.AuditLogGetPayload<{
+  include: { user: { select: { fullName: true; email: true } } };
+}>;
 
 const ACTION_LABEL: Record<string, string> = {
   create: 'Oluşturdu',
@@ -115,7 +119,7 @@ export default async function AuditPage({
             </tr>
           </thead>
           <tbody>
-            {logs.map((log) => {
+            {logs.map((log: AuditLogWithUser) => {
               const after = log.afterJson as Record<string, unknown> | null;
               const before = log.beforeJson as Record<string, unknown> | null;
               const isTransition = log.action === 'transition' && before?.status && after?.status;

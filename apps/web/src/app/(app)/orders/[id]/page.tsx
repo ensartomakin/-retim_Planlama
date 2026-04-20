@@ -31,8 +31,9 @@ export default async function OrderDetailPage({ params }: { params: { id: string
         variants: {
           include: {
             color: true,
-            size: { orderBy: { orderIndex: 'asc' } },
+            size: true,
           },
+          orderBy: { size: { orderIndex: 'asc' } },
         },
         workOrders: { orderBy: { code: 'asc' } },
         purchaseReqs: {

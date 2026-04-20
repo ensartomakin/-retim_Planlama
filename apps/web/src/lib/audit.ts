@@ -1,4 +1,4 @@
-import { prisma } from '@tekstil/db';
+import { prisma, Prisma } from '@tekstil/db';
 import type { AuditAction } from '@tekstil/db';
 
 /**
@@ -21,8 +21,8 @@ export async function withAudit<T>(
         entity,
         entityId,
         action,
-        beforeJson: before ?? undefined,
-        afterJson: pickDiff(before, outcome as Record<string, unknown>),
+        beforeJson: (before ?? undefined) as Prisma.InputJsonValue | undefined,
+        afterJson: pickDiff(before, outcome as Record<string, unknown>) as Prisma.InputJsonValue,
       },
     });
     return outcome;
