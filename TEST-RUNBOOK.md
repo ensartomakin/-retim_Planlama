@@ -46,7 +46,7 @@ pnpm db:seed
 pnpm dev
 ```
 
-→ [http://localhost:3001](http://localhost:3001)
+→ [http://localhost:3002](http://localhost:3002)
 
 Dashboard **200** ile açılmalı. Üstte **sarı DEV MODE şeridi** görünür.
 
@@ -144,7 +144,7 @@ pnpm db:seed    # demo veriyi yeniden yükler
 | "UNAUTHENTICATED" | `.env`'de `DEV_MODE=true` ve `SUPER_ADMIN_EMAIL` doğru mu? |
 | `Can't resolve '@/...'` | `apps/web/tsconfig.json`'da `"baseUrl": "."` olmalı + `rm -rf apps/web/.next` |
 | Docker port çakışması | `pnpm docker:down` → port 5432/6379 kullanıyor mu kontrol et |
-| `EADDRINUSE :::3001` | Eski dev server çalışıyor → `fuser -k 3001/tcp` |
+| `EADDRINUSE :::3002` | Eski dev server çalışıyor → `fuser -k 3002/tcp` |
 | Prisma client eski | `pnpm db:generate` |
 
 ## 7. Prod'a geçerken
