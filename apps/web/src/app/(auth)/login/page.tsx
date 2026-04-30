@@ -1,9 +1,13 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { createSupabaseBrowserClient } from '@/lib/supabase/browser';
 
+const DEV_MODE = process.env.NEXT_PUBLIC_DEV_MODE === 'true';
+
 export default function LoginPage() {
+  const router = useRouter();
   const [email, setEmail] = useState('');
   const [status, setStatus] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle');
   const [error, setError] = useState<string | null>(null);
@@ -13,6 +17,20 @@ export default function LoginPage() {
     setStatus('sending');
     setError(null);
     try {
+      if (DEV_MODE) {
+        const res = await fetch('/api/dev/switch-user', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email }),
+        });
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          throw new Error(data.error ?? `HTTP ${res.status}`);
+        }
+        router.push('/');
+        return;
+      }
+
       const supabase = createSupabaseBrowserClient();
       const { error } = await supabase.auth.signInWithOtp({
         email,
@@ -68,9 +86,18 @@ export default function LoginPage() {
               className="btn-primary w-full justify-center"
               disabled={status === 'sending'}
             >
-              {status === 'sending' ? 'Gönderiliyor...' : 'Giriş Bağlantısı Gönder'}
+              {status === 'sending'
+                ? 'Giriş yapılıyor...'
+                : DEV_MODE
+                  ? 'Giriş Yap (Dev Mode)'
+                  : 'Giriş Bağlantısı Gönder'}
             </button>
             {error && <div className="text-xs text-red-600">Hata: {error}</div>}
+            {DEV_MODE && (
+              <p className="text-[11px] text-amber-600 pt-1">
+                ⚠ Geliştirme modu aktif — Supabase kimlik doğrulaması devre dışı.
+              </p>
+            )}
             <p className="text-[11px] text-ink-3 pt-2">
               Yalnızca sistemde tanımlı kullanıcı e-postaları giriş yapabilir. Yeni kullanıcı için
               Super Admin ile iletişime geçin.
