@@ -2,7 +2,6 @@
   "name": "tekstil-mes",
   "version": "0.1.0",
   "private": true,
-  "packageManager": "pnpm@9.0.0",
   "scripts": {
     "dev": "pnpm --filter @tekstil/web dev",
     "build": "pnpm -r build",
@@ -22,6 +21,6 @@
   },
   "engines": {
     "node": ">=20.11.0",
-    "pnpm": ">=9.0.0"
+    "pnpm": ">=10.0.0"
   }
 }

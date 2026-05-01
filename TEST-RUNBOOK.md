@@ -150,6 +150,7 @@ pnpm db:seed    # demo veriyi yeniden yükler
 ## 7. Prod'a geçerken
 
 1. Prod DB bağlantılarını ayarla (`DATABASE_URL`, `DIRECT_URL`)
+   - Supabase pooler/transaction mode kullanıyorsan `DATABASE_URL` içine `pgbouncer=true` ekle.
 2. `SUPER_ADMIN_EMAIL` gerçek e-posta (opsiyonel; yoksa ilk aktif kullanıcı seçilir)
 3. Mikro ERP için `MIKRO_MODE=mssql` + bağlantı bilgileri
 4. `pnpm build && pnpm start`
