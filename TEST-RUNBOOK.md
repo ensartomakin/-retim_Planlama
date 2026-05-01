@@ -54,8 +54,8 @@ Dashboard **200** ile açılmalı. Üstte **sarı DEV MODE şeridi** görünür.
 
 `.env`'de `DEV_MODE=true` olduğunda:
 
-- `/login` ekranı atlanır — doğrudan dashboard açılır.
-- Varsayılan oturum: `SUPER_ADMIN_EMAIL` ile eşleşen kullanıcı.
+- Kimlik doğrulama yoktur; uygulama doğrudan dashboard ile açılır.
+- Varsayılan kullanıcı: `SUPER_ADMIN_EMAIL` ile eşleşen (yoksa ilk aktif) kullanıcı.
 - Sayfanın **üst sarı şeridi** ile rol denemek için kullanıcı değiştirebilirsiniz:
 
   | Kullanıcı | Rol(ler) | Ne görür? |
@@ -68,19 +68,7 @@ Dashboard **200** ile açılmalı. Üstte **sarı DEV MODE şeridi** görünür.
   | Fatma Güneş | uretim | İş emri transitions |
   | Çift Rol | tasarim + modalist | İki alan birden |
 
-Prod'da `DEV_MODE=false` yapın → magic link akışı devreye girer.
-
-## 2.1 Supabase Magic Link (DEV_MODE=false)
-
-Magic link ile giriş için Supabase projenizde **Auth → URL Configuration** altında:
-
-- **Site URL**: `.env` içindeki `NEXT_PUBLIC_APP_URL` (örn. `http://localhost:3002`)
-- **Additional Redirect URLs**: `NEXT_PUBLIC_APP_URL/auth/callback` (örn. `http://localhost:3002/auth/callback`)
-
-Notlar:
-
-- `/api/auth/login` PKCE için cookie yazar; bu yüzden login isteği aynı origin üzerinden gelmeli.
-- Callback route iki akışı destekler: `?code=...` (PKCE) veya `?token_hash=...&type=magiclink`.
+Not: Bu repoda giriş (magic link / login ekranı) akışı kaldırıldı.
 
 ## 3. Demo senaryo: Sipariş → Üretim
 
@@ -153,7 +141,7 @@ pnpm db:seed    # demo veriyi yeniden yükler
 | Dashboard boş | `pnpm db:seed` çalıştır |
 | **Supabase error: URL and Key required** | `.env` `apps/web/` altında yok (symlink); `ln -s ../../.env apps/web/.env` |
 | `Environment variable not found: DATABASE_URL` | `cp .env packages/db/.env` |
-| "UNAUTHENTICATED" | `.env`'de `DEV_MODE=true` ve `SUPER_ADMIN_EMAIL` doğru mu? |
+| "UNAUTHENTICATED" | DB'de aktif kullanıcı var mı? (`pnpm db:seed`) |
 | `Can't resolve '@/...'` | `apps/web/tsconfig.json`'da `"baseUrl": "."` olmalı + `rm -rf apps/web/.next` |
 | Docker port çakışması | `pnpm docker:down` → port 5432/6379 kullanıyor mu kontrol et |
 | `EADDRINUSE :::3002` | Eski dev server çalışıyor → `fuser -k 3002/tcp` |
@@ -161,8 +149,7 @@ pnpm db:seed    # demo veriyi yeniden yükler
 
 ## 7. Prod'a geçerken
 
-1. `.env`'de `DEV_MODE=false`
-2. Supabase projesi → URL + anon key + service role doldurulur
-3. `SUPER_ADMIN_EMAIL` gerçek e-posta
-4. Mikro ERP için `MIKRO_MODE=mssql` + bağlantı bilgileri
-5. `pnpm build && pnpm start`
+1. Prod DB bağlantılarını ayarla (`DATABASE_URL`, `DIRECT_URL`)
+2. `SUPER_ADMIN_EMAIL` gerçek e-posta (opsiyonel; yoksa ilk aktif kullanıcı seçilir)
+3. Mikro ERP için `MIKRO_MODE=mssql` + bağlantı bilgileri
+4. `pnpm build && pnpm start`

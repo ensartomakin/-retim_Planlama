@@ -1,6 +1,4 @@
-import { redirect } from 'next/navigation';
-import { getSessionUser } from '@/lib/auth/session';
-import { SignOutButton } from '@/components/sign-out-button';
+import { requireUser } from '@/lib/auth/session';
 import { NavLink } from '@/components/nav-link';
 import { DevUserSwitcher } from '@/components/dev-user-switcher';
 import { prisma } from '@tekstil/db';
@@ -47,8 +45,7 @@ const ROLE_LABEL: Record<RoleCode, string> = {
 };
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
-  const user = await getSessionUser();
-  if (!user) redirect('/login');
+  const user = await requireUser();
 
   const initials = user.fullName
     .split(' ')
@@ -138,7 +135,6 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-200 to-pink-200 grid place-items-center font-bold text-sm flex-shrink-0">
             {initials}
           </div>
-          <SignOutButton />
         </header>
 
         <div className="p-5 flex-1">{children}</div>
