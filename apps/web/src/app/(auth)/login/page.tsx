@@ -2,9 +2,29 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
+
+function errorMessage(code: string | null): string | null {
+  if (!code) return null;
+  switch (code) {
+    case 'exchange':
+      return 'Giriş bağlantısı doğrulanamadı. Lütfen linki tekrar açın veya yeniden mail isteyin.';
+    case 'verify':
+      return 'Giriş bağlantısı doğrulanamadı. Lütfen yeniden mail isteyin.';
+    case 'missing_token':
+      return 'Giriş bağlantısı eksik/bozuk görünüyor. Lütfen yeniden mail isteyin.';
+    case 'no_email':
+      return 'Supabase kullanıcı e-postasını döndüremedi. Lütfen yeniden deneyin.';
+    case 'not_whitelisted':
+      return 'Bu e-posta sistemde tanımlı değil veya pasif. Super Admin ile iletişime geçin.';
+    default:
+      return 'Giriş sırasında hata oluştu. Lütfen yeniden deneyin.';
+  }
+}
 
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [email, setEmail] = useState('');
   const [status, setStatus] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle');
   const [error, setError] = useState<string | null>(null);
@@ -69,6 +89,11 @@ export default function LoginPage() {
           </div>
         ) : (
           <form onSubmit={onSubmit} className="space-y-3">
+            {errorMessage(searchParams.get('error')) && (
+              <div className="text-xs text-red-600">
+                {errorMessage(searchParams.get('error'))}
+              </div>
+            )}
             <label className="block text-sm font-semibold">E-posta</label>
             <input
               type="email"
