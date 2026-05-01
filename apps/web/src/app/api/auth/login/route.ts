@@ -15,52 +15,63 @@ const DEV_MODE =
   supabaseKey === 'dev_placeholder';
 
 export async function POST(req: Request) {
-  const { email, redirectTo } = (await req.json()) as {
-    email?: string;
-    redirectTo?: string;
-  };
+  try {
+    const body = await req.json().catch(() => ({}));
+    const { email, redirectTo } = body as { email?: string; redirectTo?: string };
 
-  if (!email) {
-    return NextResponse.json({ error: 'E-posta gerekli' }, { status: 400 });
-  }
-
-  if (DEV_MODE) {
-    const user = await prisma.user.findUnique({ where: { email } });
-    if (!user || !user.isActive) {
-      return NextResponse.json(
-        { error: 'Bu e-posta sistemde tanımlı değil' },
-        { status: 404 },
-      );
+    if (!email) {
+      return NextResponse.json({ error: 'E-posta gerekli' }, { status: 400 });
     }
 
-    cookies().set('dev_user_email', email, {
-      httpOnly: true,
-      sameSite: 'lax',
-      path: '/',
-      maxAge: 60 * 60 * 24 * 30,
+    if (DEV_MODE) {
+      // DB bağlantısı yoksa bile DEV_MODE'da giriş izni ver
+      try {
+        const user = await prisma.user.findUnique({ where: { email } });
+        if (user && !user.isActive) {
+          return NextResponse.json(
+            { error: 'Bu kullanıcı hesabı devre dışı' },
+            { status: 403 },
+          );
+        }
+      } catch {
+        // DB erişilemiyorsa DEV_MODE'da yine de devam et
+      }
+
+      cookies().set('dev_user_email', email, {
+        httpOnly: true,
+        sameSite: 'lax',
+        path: '/',
+        maxAge: 60 * 60 * 24 * 30,
+      });
+
+      return NextResponse.json({ ok: true, mode: 'dev', redirect: redirectTo ?? '/' });
+    }
+
+    // Production: Supabase magic link
+    const cookieStore = cookies();
+    const supabase = createServerClient(supabaseUrl, supabaseKey, {
+      cookies: {
+        get: (name: string) => cookieStore.get(name)?.value,
+        set: () => {},
+        remove: () => {},
+      },
     });
 
-    return NextResponse.json({ ok: true, mode: 'dev', redirect: redirectTo ?? '/' });
+    const { error } = await supabase.auth.signInWithOtp({
+      email,
+      options: { emailRedirectTo: redirectTo },
+    });
+
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 400 });
+    }
+
+    return NextResponse.json({ ok: true, mode: 'otp' });
+  } catch (err) {
+    console.error('[auth/login]', err);
+    return NextResponse.json(
+      { error: 'Sunucu hatası, lütfen tekrar deneyin' },
+      { status: 500 },
+    );
   }
-
-  // Production: Supabase magic link
-  const cookieStore = cookies();
-  const supabase = createServerClient(supabaseUrl, supabaseKey, {
-    cookies: {
-      get: (name: string) => cookieStore.get(name)?.value,
-      set: () => {},
-      remove: () => {},
-    },
-  });
-
-  const { error } = await supabase.auth.signInWithOtp({
-    email,
-    options: { emailRedirectTo: redirectTo },
-  });
-
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 400 });
-  }
-
-  return NextResponse.json({ ok: true, mode: 'otp' });
 }
