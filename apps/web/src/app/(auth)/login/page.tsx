@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { Suspense, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSearchParams } from 'next/navigation';
 
@@ -24,7 +24,6 @@ function errorMessage(code: string | null): string | null {
 
 export default function LoginPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const [email, setEmail] = useState('');
   const [status, setStatus] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle');
   const [error, setError] = useState<string | null>(null);
@@ -89,11 +88,9 @@ export default function LoginPage() {
           </div>
         ) : (
           <form onSubmit={onSubmit} className="space-y-3">
-            {errorMessage(searchParams.get('error')) && (
-              <div className="text-xs text-red-600">
-                {errorMessage(searchParams.get('error'))}
-              </div>
-            )}
+            <Suspense fallback={null}>
+              <LoginErrorBanner />
+            </Suspense>
             <label className="block text-sm font-semibold">E-posta</label>
             <input
               type="email"
@@ -120,4 +117,11 @@ export default function LoginPage() {
       </div>
     </div>
   );
+}
+
+function LoginErrorBanner() {
+  const searchParams = useSearchParams();
+  const message = errorMessage(searchParams.get('error'));
+  if (!message) return null;
+  return <div className="text-xs text-red-600">{message}</div>;
 }
