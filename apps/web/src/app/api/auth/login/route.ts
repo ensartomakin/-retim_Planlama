@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
-import { createServerClient } from '@supabase/ssr';
 import { prisma } from '@tekstil/db';
+import { createSupabaseServerClient } from '@/lib/supabase/server';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? '';
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '';
@@ -48,14 +48,8 @@ export async function POST(req: Request) {
     }
 
     // Production: Supabase magic link
-    const cookieStore = cookies();
-    const supabase = createServerClient(supabaseUrl, supabaseKey, {
-      cookies: {
-        get: (name: string) => cookieStore.get(name)?.value,
-        set: () => {},
-        remove: () => {},
-      },
-    });
+    // PKCE flow için code_verifier cookie'sinin yazılabilmesi gerekir.
+    const supabase = createSupabaseServerClient();
 
     const { error } = await supabase.auth.signInWithOtp({
       email,

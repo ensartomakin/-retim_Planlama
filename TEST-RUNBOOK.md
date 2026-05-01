@@ -70,6 +70,18 @@ Dashboard **200** ile açılmalı. Üstte **sarı DEV MODE şeridi** görünür.
 
 Prod'da `DEV_MODE=false` yapın → magic link akışı devreye girer.
 
+## 2.1 Supabase Magic Link (DEV_MODE=false)
+
+Magic link ile giriş için Supabase projenizde **Auth → URL Configuration** altında:
+
+- **Site URL**: `.env` içindeki `NEXT_PUBLIC_APP_URL` (örn. `http://localhost:3002`)
+- **Additional Redirect URLs**: `NEXT_PUBLIC_APP_URL/auth/callback` (örn. `http://localhost:3002/auth/callback`)
+
+Notlar:
+
+- `/api/auth/login` PKCE için cookie yazar; bu yüzden login isteği aynı origin üzerinden gelmeli.
+- Callback route iki akışı destekler: `?code=...` (PKCE) veya `?token_hash=...&type=magiclink`.
+
 ## 3. Demo senaryo: Sipariş → Üretim
 
 Seed sonrası sistemde hazır bulunanlar:
