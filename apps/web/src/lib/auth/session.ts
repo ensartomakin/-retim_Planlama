@@ -38,6 +38,14 @@ export const getSessionUser = cache(async (): Promise<SessionUser | null> => {
 
 export async function requireUser(): Promise<SessionUser> {
   const u = await getSessionUser();
-  if (!u) throw new Error('UNAUTHENTICATED');
-  return u;
+  if (u) return u;
+
+  // Auth devre dışı: DB'de kullanıcı yoksa bile UI'ın çalışması için
+  // fallback bir "super_admin" kullanıcı döndür.
+  return {
+    id: '0',
+    email: process.env.SUPER_ADMIN_EMAIL || 'admin@local',
+    fullName: process.env.SUPER_ADMIN_NAME || 'Admin',
+    roles: ['super_admin'] as RoleCode[],
+  };
 }
