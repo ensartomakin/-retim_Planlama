@@ -1,26 +1,41 @@
 'use client';
 
 import { useState } from 'react';
-import { createSupabaseBrowserClient } from '@/lib/supabase/browser';
+import { useRouter } from 'next/navigation';
 
 export default function LoginPage() {
+  const router = useRouter();
   const [email, setEmail] = useState('');
   const [status, setStatus] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle');
   const [error, setError] = useState<string | null>(null);
+  const [isDevMode, setIsDevMode] = useState(false);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setStatus('sending');
     setError(null);
     try {
-      const supabase = createSupabaseBrowserClient();
-      const { error } = await supabase.auth.signInWithOtp({
-        email,
-        options: {
-          emailRedirectTo: `${window.location.origin}/auth/callback`,
-        },
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email,
+          redirectTo: `${window.location.origin}/auth/callback`,
+        }),
       });
-      if (error) throw error;
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error ?? `HTTP ${res.status}`);
+      }
+
+      if (data.mode === 'dev') {
+        setIsDevMode(true);
+        router.push(data.redirect ?? '/');
+        return;
+      }
+
       setStatus('sent');
     } catch (e) {
       setStatus('error');
@@ -68,7 +83,7 @@ export default function LoginPage() {
               className="btn-primary w-full justify-center"
               disabled={status === 'sending'}
             >
-              {status === 'sending' ? 'Gönderiliyor...' : 'Giriş Bağlantısı Gönder'}
+              {status === 'sending' ? 'Giriş yapılıyor...' : 'Giriş Yap'}
             </button>
             {error && <div className="text-xs text-red-600">Hata: {error}</div>}
             <p className="text-[11px] text-ink-3 pt-2">
