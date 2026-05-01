@@ -102,9 +102,8 @@ Endüstri 4.0 tabanlı, tekstil sektörüne özel, Odoo Üretim modülü esintil
 - **`packages/contracts`:** Role matrisi, Model/Order/WorkOrder state machines, Zod DTO'ları, kod formatları (`SO-YYYY-NNNNNN`, `WO-YYYY-NNNNNN-PP`)
 - **`packages/erp-mikro`:** Adaptör arayüzü + `DummyMikroAdapter` (çalışır) + `MssqlMikroAdapter` (v16 iskeleti)
 - **`apps/web`:** Next.js 14 App Router + Tailwind + shadcn-benzeri tema
-  - Magic link girişi + **beyaz liste** (Supabase Auth)
-  - Middleware ile route koruma
-  - `getSessionUser()` → DB'deki `users/user_role` ile zenginleşir, çoklu rol destekli
+  - Giriş ekranı yok: uygulama direkt dashboard ile açılır
+  - `getSessionUser()` → DB'deki aktif kullanıcıyı (tercihen `SUPER_ADMIN_EMAIL`) kullanır
   - Dashboard (canlı Prisma verisiyle), Modeller, Siparişler sayfaları
   - Odoo-benzeri sidebar + topbar + KPI kartları + süreç çarkları
 
@@ -129,4 +128,4 @@ pnpm db:seed           # dummy veri
 pnpm dev               # http://localhost:3000
 ```
 
-İlk girişte `SUPER_ADMIN_EMAIL` adresiyle magic link isteyin; mail gelen linkle `/dashboard`'a yönlenirsiniz. Sistemde tanımsız e-posta ile giriş denemeleri sessizce reddedilir.
+Not: Bu repoda login/magic link akışı kaldırıldı; uygulama doğrudan dashboard ile açılır.
